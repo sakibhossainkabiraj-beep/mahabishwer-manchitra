@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#080d1c"><meta name="description" content="মহাবিশ্বের মানচিত্র — মহাকাশ থেকে পৃথিবীর মানচিত্রে একটি শিক্ষামূলক যাত্রা">
+<link rel="manifest" href="manifest.webmanifest">
+<title>মহাবিশ্বের মানচিত্র | Map of the Universe</title>
+<style>
+:root{--bg:#070b18;--panel:rgba(12,19,39,.88);--line:rgba(164,190,255,.22);--txt:#f1f5ff;--muted:#aab7d8;--gold:#f6d58a;--blue:#78baff}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+button,select,input{font:inherit}button,select{color:var(--txt);background:#182342;border:1px solid var(--line);border-radius:12px;padding:9px 12px}button{cursor:pointer}button:active{transform:scale(.98)}
+#scene{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block;background:radial-gradient(ellipse at 50% 45%,#16274c,#080d1c 60%,#03050d)}
+#map{position:absolute;inset:0;display:none;background:#0b1224;z-index:2}#map.on{display:block}
+.topbar{position:absolute;z-index:10;left:10px;right:10px;top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;pointer-events:none}
+.topbar>*{pointer-events:auto}.brand{font-weight:800;letter-spacing:.2px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;backdrop-filter:blur(12px);box-shadow:0 8px 30px #0005}.brand small{display:block;font-size:10px;color:var(--muted);font-weight:500}
+.push{flex:1}.glass{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--line);box-shadow:0 8px 30px #0005}
+.panel{position:absolute;z-index:11;width:min(330px,calc(100vw - 24px));max-height:min(70vh,650px);overflow:auto;border-radius:18px;left:12px;bottom:12px;padding:0 14px 14px;touch-action:pan-y}
+.panel.right{left:auto;right:12px;bottom:12px;width:min(300px,calc(100vw - 24px))}
+.panelhead{position:sticky;top:0;background:rgba(12,19,39,.97);margin:0 -14px 12px;padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;cursor:grab;touch-action:none}
+.panelhead:active{cursor:grabbing}.panel h2{font-size:18px;margin:0 0 6px}.panel p{color:#d2dcf6;line-height:1.45;font-size:13px;margin:7px 0}.muted{color:var(--muted)!important;font-size:12px!important}
+.row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.full{width:100%}.pill{border-radius:999px}.small{font-size:12px;padding:7px 9px}.section{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}.planetgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.planet{padding:8px 4px;font-size:12px;min-height:56px}.planet span{display:block;font-size:19px;margin-bottom:3px}.planet.active{border-color:var(--gold);background:#453b2a}
+#toast{position:absolute;z-index:30;bottom:16px;left:50%;transform:translateX(-50%);background:#101a34;border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:none;max-width:90vw;font-size:13px}
+#ownerModal{position:absolute;inset:0;z-index:50;background:#02040bdc;display:none;align-items:center;justify-content:center;padding:20px}
+.modal{width:min(420px,100%);border:1px solid var(--line);border-radius:20px;padding:20px;background:#0e1730;box-shadow:0 20px 70px #0009}.modal h2{margin-top:0}
+input{background:#070d1d;border:1px solid var(--line);border-radius:10px;padding:11px;color:white;width:100%;margin:7px 0}
+#scaleBar{position:absolute;z-index:8;right:12px;top:78px;display:flex;flex-direction:column;gap:7px}
+#scaleBar button{width:44px;height:44px;font-size:18px;padding:0;border-radius:14px}
+#hint{position:absolute;z-index:8;top:78px;left:50%;transform:translateX(-50%);max-width:70vw;text-align:center;background:#070d1dcc;border:1px solid var(--line);border-radius:99px;padding:8px 12px;font-size:11px;color:#dbe7ff}
+#mapNote{position:absolute;z-index:4;left:12px;top:82px;background:#0b1530e8;border:1px solid var(--line);border-radius:12px;padding:9px 12px;max-width:min(420px,calc(100% - 24px));font-size:12px;max-height:65vh;overflow:auto}
+#mapNote select{font-size:11px;padding:7px;max-width:100%}
+.leaflet-container{background:#0b1224} #qiblaCompass{transition:transform .1s linear} #offlineStatus{overflow-wrap:anywhere}
+
+#starsButton{display:flex;gap:6px;align-items:center}
+@media(max-width:600px){.brand{font-size:13px;padding:8px 10px}.topbar{gap:6px}.panel{bottom:10px;left:10px;width:min(300px,calc(100vw - 20px));max-height:42vh}.panel.right{right:10px;left:auto;width:min(255px,calc(100vw - 20px));max-height:38vh}.panel p{font-size:12px}.panelhead{padding:10px 12px}.planetgrid{grid-template-columns:repeat(3,1fr)}#hint{top:67px}}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Interactive cosmic atlas"></canvas>
+<div id="map"></div><div id="mapNote">🌍 <span data-i="mapnote">পৃথিবীর মানচিত্র: জুম করলে শহর ও গ্রামের বিস্তারিত দেখা যাবে (ইন্টারনেট প্রয়োজন)।</span>
+ <div class="row" style="margin-top:8px">
+ <select id="mapLayer" aria-label="Map layer" style="min-width:140px">
+ <option value="street">Street map</option><option value="satellite">Satellite</option><option value="hybrid">Hybrid</option><option value="terrain">Terrain</option><option value="dark">Dark map</option><option value="humanitarian">Humanitarian</option>
+ </select><button id="locateBtn" class="small">◎ My location</button>
+ </div>
+ <div class="row" style="margin-top:8px">
+ <button id="offlineHelpBtn" class="small">⬇ Offline maps</button>
+ <input id="offlineFile" type="file" accept=".pmtiles,.mbtiles,application/octet-stream" style="display:none">
+ <button id="importOfflineBtn" class="small">Import map file</button>
+ </div>
+ <p id="offlineStatus" style="font-size:10px;line-height:1.35;margin:5px 0;color:#c7d6f5">Offline: import a legally obtained regional .pmtiles map file. Full-world offline maps are very large.</p>
+ <div class="row" style="margin-top:8px;align-items:center">
+ <div id="qiblaCompass" style="width:64px;height:64px;flex:none;border:1px solid #8aa6db;border-radius:50%;position:relative;background:#08152b;display:flex;align-items:center;justify-content:center">
+ <span style="position:absolute;top:2px;font-size:10px">N</span><span id="qiblaArrow" style="font-size:28px;color:#f6d58a;transform:rotate(0deg)">▲</span><span style="position:absolute;bottom:2px;font-size:9px">🕋 Qibla</span>
+ </div>
+ <div style="font-size:11px;line-height:1.45"><b>Qibla compass</b><br><span id="qiblaText">Location needed. GPS may work offline; live compass needs sensor permission.</span><br><button id="qiblaBtn" class="small">Find Qibla</button><button id="sensorBtn" class="small">Enable live compass</button></div>
+ </div>
+</div>
+<div class="topbar">
+ <div class="brand">🌌 <span data-i="appname">মহাবিশ্বের মানচিত্র</span><small>MAP OF THE UNIVERSE · EDUCATION ATLAS</small></div>
+ <div class="push"></div>
+ <select id="lang" aria-label="Language" title="Language">
+ <option value="bn">বাংলা</option><option value="en">English</option><option value="ar">العربية</option><option value="hi">हिन्दी</option><option value="ur">اردو</option><option value="fr">Français</option><option value="es">Español</option><option value="id">Bahasa Indonesia</option><option value="tr">Türkçe</option><option value="zh">中文</option>
+ </select>
+ <button id="ownerBtn" class="small">🔒 Owner</button>
+</div>
+<div id="hint">🤏 <span data-i="gesture">দুই আঙুল ছড়ান/কাছান: জুম · এক আঙুল টানুন: ঘোরান</span></div>
+<div id="scaleBar"><button id="zoomIn" title="Zoom in">＋</button><button id="zoomOut" title="Zoom out">－</button><button id="earthBtn" title="Earth">🌍</button><button id="cosmosBtn" title="Cosmos">🌌</button><button id="mapBtn" title="Map">🗺️</button></div>
+<section class="panel glass" id="infoPanel">
+ <div class="panelhead" data-drag="infoPanel"><strong data-i="explore">অন্বেষণ ও ব্যাখ্যা</strong><button class="small" data-hide="infoPanel">−</button></div>
+ <div id="stageTitle"><h2>🌍 পৃথিবী</h2></div><p id="stageDesc">আমাদের নীল গ্রহ। পৃথিবীর বাস্তব রং, মেঘ, মহাসাগর ও স্থলভাগের একটি সরলীকৃত চিত্র।</p>
+ <div class="section"><div class="row"><button id="mapFromInfo" class="full">🗺️ <span data-i="openmap">পৃথিবীর মানচিত্র খুলুন</span></button><button id="moonToggle" class="full">🌙 <span data-i="moon">চাঁদের কক্ষপথ</span></button></div></div>
+ <div class="section"><strong data-i="planets">সৌরজগতের বস্তু</strong><p class="muted" data-i="planetnote">যেকোনো গ্রহ/বস্তু বেছে নিয়ে আলাদা করে দেখুন। দূরত্ব ও আকার এখানে শিক্ষামূলকভাবে সরলীকৃত।</p><div class="planetgrid" id="planetGrid"></div></div>
+ <div class="section"><button id="starBtn" class="full">☆ <span data-i="addstar">এই বিষয়টি পছন্দের তালিকায় রাখুন</span></button><button id="explainBtn" class="full" style="margin-top:7px">📘 <span data-i="more">আরও ব্যাখ্যা</span></button><div id="extra" hidden></div></div>
+</section>
+<section class="panel right glass" id="toolsPanel">
+ <div class="panelhead" data-drag="toolsPanel"><strong data-i="tools">দৃশ্য ও পছন্দ</strong><button class="small" data-hide="toolsPanel">−</button></div>
+ <p data-i="rotate">দৃশ্য ঘোরাতে এক আঙুল/মাউস টানুন। জুম করতে পিঞ্চ করুন বা +/− ব্যবহার করুন।</p>
+ <div class="row"><button id="animBtn" class="full">⏸ <span data-i="pause">অ্যানিমেশন থামান</span></button><button id="resetBtn" class="full">↺ <span data-i="reset">রিসেট</span></button></div>
+ <div class="section"><strong>☆ <span data-i="favorites">পছন্দের বিষয়</span></strong><div id="favorites" class="muted">এখনও কিছু সংরক্ষণ করা হয়নি।</div></div>
+ <div class="section"><strong data-i="sciencefaith">বিজ্ঞান ও সৃষ্টির বিস্ময়</strong><p data-i="faith">এই অ্যাটলাস বৈজ্ঞানিক তথ্য ও সরলীকৃত দৃশ্য দেখায়। সৃষ্টির সৌন্দর্য নিয়ে ব্যক্তিগত/ধর্মীয় ভাবনা করা যায়; তবে অনুমানকে বৈজ্ঞানিকভাবে নিশ্চিত তথ্য হিসেবে দেখানো হয় না।</p></div>
+ <p class="muted" data-i="caution">মানচিত্রের শহর/গ্রাম স্তরে যেতে ইন্টারনেট ও OpenStreetMap টাইল প্রয়োজন। এই প্রোটোটাইপ পূর্ণাঙ্গ জ্যোতির্বৈজ্ঞানিক সিমুলেশন নয়।</p>
+</section>
+<div id="toast"></div>
+<div id="ownerModal"><div class="modal">
+ <h2>🔒 Owner settings</h2><p id="ownerMsg">শুধু অ্যাপ-মালিকের সেটিংস। প্রথমবার একটি পাসওয়ার্ড তৈরি করুন।</p>
+ <input id="ownerPass" type="password" autocomplete="current-password" placeholder="Owner password">
+ <input id="ownerPass2" type="password" autocomplete="new-password" placeholder="New password (first setup/change)">
+ <div class="row"><button id="ownerSubmit" class="full">Continue</button><button id="ownerClose" class="full">Close</button></div>
+ <p class="muted">সতর্কতা: এটি একটি অফলাইন/ব্রাউজার প্রোটোটাইপের স্থানীয় লক। HTML ফাইল হাতে পেলে প্রযুক্তিগতভাবে পাশ কাটানো সম্ভব; শক্তিশালী ব্যক্তিগত নিরাপত্তার জন্য সার্ভার-ভিত্তিক লগইন দরকার।</p>
+</div></div>
+<script>
+const T={
+bn:{appname:"মহাবিশ্বের মানচিত্র",gesture:"দুই আঙুল ছড়ান/কাছান: জুম · এক আঙুল টানুন: ঘোরান",explore:"অন্বেষণ ও ব্যাখ্যা",mapnote:"পৃথিবীর মানচিত্র: জুম করলে শহর ও গ্রামের বিস্তারিত দেখা যাবে (ইন্টারনেট প্রয়োজন)।",openmap:"পৃথিবীর মানচিত্র খুলুন",moon:"চাঁদের কক্ষপথ",planets:"সৌরজগতের বস্তু",planetnote:"যেকোনো গ্রহ/বস্তু বেছে নিয়ে আলাদা করে দেখুন। দূরত্ব ও আকার এখানে শিক্ষামূলকভাবে সরলীকৃত।",addstar:"এই বিষয়টি পছন্দের তালিকায় রাখুন",more:"আরও ব্যাখ্যা",tools:"দৃশ্য ও পছন্দ",rotate:"দৃশ্য ঘোরাতে এক আঙুল/মাউস টানুন। জুম করতে পিঞ্চ করুন বা +/− ব্যবহার করুন।",pause:"অ্যানিমেশন থামান",play:"অ্যানিমেশন চালান",reset:"রিসেট",favorites:"পছন্দের বিষয়",sciencefaith:"বিজ্ঞান ও সৃষ্টির বিস্ময়",faith:"এই অ্যাটলাস বৈজ্ঞানিক তথ্য ও সরলীকৃত দৃশ্য দেখায়। সৃষ্টির সৌন্দর্য নিয়ে ব্যক্তিগত/ধর্মীয় ভাবনা করা যায়; তবে অনুমানকে বৈজ্ঞানিকভাবে নিশ্চিত তথ্য হিসেবে দেখানো হয় না।",caution:"মানচিত্রের শহর/গ্রাম স্তরে যেতে ইন্টারনেট ও OpenStreetMap টাইল প্রয়োজন। এই প্রোটোটাইপ পূর্ণাঙ্গ জ্যোতির্বৈজ্ঞানিক সিমুলেশন নয়.",earth:"পৃথিবী",sun:"সূর্য",mercury:"বুধ",venus:"শুক্র",mars:"মঙ্গল",jupiter:"বৃহস্পতি",saturn:"শনি",uranus:"ইউরেনাস",neptune:"নেপচুন",pluto:"প্লুটো (বামন গ্রহ)",ceres:"সেরেস",eris:"এরিস",moonName:"চাঁদ",solar:"সৌরজগত",galaxy:"ছায়াপথ",universe:"পর্যবেক্ষণযোগ্য মহাবিশ্ব",web:"মহাজাগতিক জাল",multiverse:"মাল্টিভার্স (অনুমান)",earthDesc:"আমাদের নীল গ্রহ: তরল জল, মেঘ, মহাসাগর ও স্থলভাগ। দৃশ্যটি চিত্রধর্মী; বাস্তব মানচিত্রের জন্য Map খুলুন।",mapToast:"মানচিত্র চালু হচ্ছে; ইন্টারনেট সংযোগ লাগবে।",noMap:"মানচিত্র লাইব্রেরি/টাইল লোড হয়নি। ইন্টারনেট চালু করে আবার চেষ্টা করুন।",saved:"পছন্দের তালিকায় যোগ হয়েছে।",already:"এটি ইতিমধ্যে পছন্দের তালিকায় আছে।",noFav:"এখনও কিছু সংরক্ষণ করা হয়নি।",ownerSetup:"প্রথমবার একটি মালিক-পাসওয়ার্ড তৈরি করুন।",ownerWrong:"পাসওয়ার্ড মিলেনি।",ownerReady:"মালিক সেটিংস খোলা হয়েছে।",explainEarth:"পৃথিবী সূর্য থেকে তৃতীয় গ্রহ। চাঁদ পৃথিবীকে প্রদক্ষিণ করে। চাঁদের কক্ষপথ ও আকার এখানে বাস্তব স্কেলে নয়, বোঝার সুবিধার জন্য বড় করে দেখানো হয়।",explainPlanet:"গ্রহগুলো সূর্যকে প্রদক্ষিণ করে। এই দৃশ্যে দূরত্ব/আকার প্রকৃত অনুপাতে নয়; এটি তুলনামূলক পরিচিতির জন্য।",explainCosmos:"গ্যালাক্সি, গ্যালাক্সি-গুচ্ছ ও মহাজাগতিক জাল বৃহৎ-স্কেলের গঠন। পর্যবেক্ষণযোগ্য মহাবিশ্বের বাইরে কী আছে, তা সম্পর্কে আমাদের জ্ঞান সীমিত।",explainMulti:"মাল্টিভার্স একটি অনুমানমূলক ধারণা; এর অস্তিত্ব নিশ্চিতভাবে প্রমাণিত নয়।"},
+en:{appname:"Map of the Universe",gesture:"Pinch out/in to zoom · Drag with one finger to rotate",explore:"Explore & learn",mapnote:"Earth map: zoom in to explore towns and villages (internet required).",openmap:"Open Earth map",moon:"Moon orbit",planets:"Solar system objects",planetnote:"Choose an object to inspect it. Sizes and distances are simplified for learning.",addstar:"Add this topic to favorites",more:"More explanation",tools:"View & favorites",rotate:"Drag to rotate. Pinch or use +/− to zoom.",pause:"Pause animation",play:"Resume animation",reset:"Reset",favorites:"Favorites",sciencefaith:"Science & wonder",faith:"This atlas presents scientific information and simplified visuals. You may reflect on creation's beauty; hypotheses are not presented as established facts.",caution:"Detailed town/village maps require internet and OpenStreetMap tiles. This prototype is not a complete astronomical simulation.",earth:"Earth",sun:"Sun",mercury:"Mercury",venus:"Venus",mars:"Mars",jupiter:"Jupiter",saturn:"Saturn",uranus:"Uranus",neptune:"Neptune",pluto:"Pluto (dwarf planet)",ceres:"Ceres",eris:"Eris",moonName:"Moon",solar:"Solar system",galaxy:"Milky Way",universe:"Observable universe",web:"Cosmic web",multiverse:"Multiverse (hypothesis)",earthDesc:"Our blue planet, with oceans, clouds and land. This illustration is stylized; open Map for a real map.",mapToast:"Opening map; internet connection required.",noMap:"Map library/tiles did not load. Connect to the internet and try again.",saved:"Added to favorites.",already:"Already in favorites.",noFav:"No favorites saved yet.",ownerSetup:"Create an owner password for first-time setup.",ownerWrong:"Password did not match.",ownerReady:"Owner settings unlocked.",explainEarth:"Earth is the third planet from the Sun. The Moon orbits Earth. The orbit and Moon size are exaggerated here for visibility, not shown to scale.",explainPlanet:"The planets orbit the Sun. Sizes and distances here are not to scale; the view is for orientation and learning.",explainCosmos:"Galaxies, galaxy clusters and the cosmic web are large-scale structures. What lies beyond the observable universe remains uncertain.",explainMulti:"The multiverse is a speculative idea; its existence has not been conclusively demonstrated."},
+ar:{appname:"خريطة الكون",gesture:"باعد/قرّب إصبعين للتكبير · اسحب بإصبع واحد للتدوير",explore:"استكشف وتعلّم",mapnote:"خريطة الأرض: قرّب لاستكشاف المدن والقرى (يتطلب الإنترنت).",openmap:"افتح خريطة الأرض",moon:"مدار القمر",planets:"أجرام النظام الشمسي",planetnote:"اختر جرماً لمشاهدته. الأحجام والمسافات مبسطة للتعلم.",addstar:"أضف إلى المفضلة",more:"شرح إضافي",tools:"العرض والمفضلة",rotate:"اسحب للتدوير. قرّب بإصبعين أو استخدم +/−.",pause:"إيقاف الحركة",play:"استئناف الحركة",reset:"إعادة ضبط",favorites:"المفضلة",sciencefaith:"العلم وروعة الخلق",faith:"يعرض هذا الأطلس معلومات علمية ورسومات مبسطة. يمكن التأمل في جمال الخلق، مع عدم تقديم الفرضيات كحقائق مؤكدة.",caution:"تحتاج خرائط المدن والقرى إلى الإنترنت وخرائط OpenStreetMap. هذا نموذج أولي وليس محاكاة فلكية كاملة.",earth:"الأرض",sun:"الشمس",mercury:"عطارد",venus:"الزهرة",mars:"المريخ",jupiter:"المشتري",saturn:"زحل",uranus:"أورانوس",neptune:"نبتون",pluto:"بلوتو (كوكب قزم)",ceres:"سيريس",eris:"إيريس",moonName:"القمر",solar:"النظام الشمسي",galaxy:"درب التبانة",universe:"الكون المرصود",web:"الشبكة الكونية",multiverse:"الأكوان المتعددة (فرضية)",earthDesc:"كوكبنا الأزرق ذو المحيطات والسحب واليابسة. افتح الخريطة لرؤية خريطة حقيقية.",mapToast:"يتم فتح الخريطة؛ يلزم اتصال بالإنترنت.",noMap:"تعذر تحميل الخريطة. اتصل بالإنترنت وحاول مجدداً.",saved:"أُضيف إلى المفضلة.",already:"موجود بالفعل في المفضلة.",noFav:"لا توجد عناصر مفضلة بعد.",ownerSetup:"أنشئ كلمة مرور للمالك لأول مرة.",ownerWrong:"كلمة المرور غير صحيحة.",ownerReady:"تم فتح إعدادات المالك.",explainEarth:"الأرض ثالث كوكب من الشمس، والقمر يدور حولها. المدار والحجم مبالغ فيهما للتوضيح وليس وفق المقياس الحقيقي.",explainPlanet:"تدور الكواكب حول الشمس. الأحجام والمسافات هنا ليست بمقياسها الحقيقي.",explainCosmos:"المجرات والعناقيد والشبكة الكونية بنى واسعة النطاق. معرفتنا بما وراء الكون المرصود محدودة.",explainMulti:"الأكوان المتعددة فكرة افتراضية ولم يثبت وجودها بشكل قاطع."}
+};
+const names=['sun','mercury','venus','earth','mars','jupiter','saturn','uranus','neptune','pluto','ceres','eris','moonName'];
+const colors={sun:'#ffd46a',mercury:'#aaa49b',venus:'#e6bd83',earth:'#288ee6',mars:'#c96c4a',jupiter:'#d8ad7d',saturn:'#d8c28d',uranus:'#78d8dc',neptune:'#5479e7',pluto:'#bba7a0',ceres:'#aaa9a6',eris:'#b5bdc6',moonName:'#d3d7df'};
+let lang='bn',stage='earth',target='earth',rot=0,zoom=1,anim=true,moonOn=true,drag=null,pointers=new Map(),pinch=null,mapActive=false,mapLoaded=false,favorites=[],ownerUnlocked=false;
+const $=id=>document.getElementById(id), canvas=$('scene'),ctx=canvas.getContext('2d');
+function tr(k){return (T[lang]&&T[lang][k])||T.en[k]||T.bn[k]||k}
+function applyLang(){document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'||lang==='ur'?'rtl':'ltr';document.querySelectorAll('[data-i]').forEach(e=>e.textContent=tr(e.dataset.i));$('stageTitle').innerHTML='<h2>'+icon(target)+' '+tr(target==='earth'?'earth':target)+'</h2>';updateDescription();renderGrid();renderFavorites();$('animBtn').innerHTML=(anim?'⏸ ':'▶ ')+`<span>${tr(anim?'pause':'play')}</span>`;}
+function icon(k){return ({sun:'☀️',mercury:'⚫',venus:'🟠',earth:'🌍',mars:'🔴',jupiter:'🟤',saturn:'🪐',uranus:'🔵',neptune:'🔵',pluto:'🪨',ceres:'🪨',eris:'🪨',moonName:'🌙',solar:'☀️',galaxy:'🌌',universe:'✨',web:'🕸️',multiverse:'🫧'})[k]||'✨'}
+function renderGrid(){const arr=['sun','mercury','venus','earth','moonName','mars','jupiter','saturn','uranus','neptune','pluto','ceres','eris'];$('planetGrid').innerHTML=arr.map(k=>`<button class="planet ${target===k?'active':''}" data-target="${k}"><span>${icon(k)}</span>${tr(k)}</button>`).join('');document.querySelectorAll('[data-target]').forEach(b=>b.onclick=()=>selectTarget(b.dataset.target))}
+function selectTarget(k){target=k;stage=k==='earth'?'earth':'solar';mapActive=false;$('map').classList.remove('on');$('mapNote').style.display='none';zoom=k==='earth'?1:1.2;rot=0;updateDescription();renderGrid();$('stageTitle').innerHTML='<h2>'+icon(k)+' '+tr(k)+'</h2>';toast(tr(k)+' — '+tr('explainPlanet'));}
+function updateDescription(){let desc=target==='earth'?tr('earthDesc'):(['sun','mercury','venus','mars','jupiter','saturn','uranus','neptune','pluto','ceres','eris','moonName'].includes(target)?tr('explainPlanet'):tr('explainCosmos'));$('stageDesc').textContent=desc;}
+function toast(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(window._tt);window._tt=setTimeout(()=>$('toast').style.display='none',3000)}
+function resize(){let dpr=Math.min(devicePixelRatio||1,2);canvas.width=innerWidth*dpr;canvas.height=innerHeight*dpr;canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
+let stars=Array.from({length:260},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.5+.2,a:Math.random()*.8+.2}));
+function sphere(x,y,r,base,kind){let g=ctx.createRadialGradient(x-r*.3,y-r*.35,r*.05,x,y,r);g.addColorStop(0,lighten(base,1.4));g.addColorStop(.5,base);g.addColorStop(1,'#02050c');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.clip();
+ if(kind==='earth'){ctx.globalAlpha=.85;ctx.fillStyle='#3d9b57';for(let i=0;i<8;i++){let a=i*2.399+rot*.03,xx=x+Math.cos(a)*r*(.35+Math.random()*.2),yy=y+Math.sin(a)*r*.55;ctx.beginPath();ctx.ellipse(xx,yy,r*.17,r*.09,a,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=.65;ctx.fillStyle='#fff';for(let i=0;i<5;i++){ctx.beginPath();ctx.ellipse(x+Math.sin(i*2+rot*.02)*r*.5,y+Math.cos(i*3)*r*.45,r*.3,r*.035,-.3,0,Math.PI*2);ctx.fill()}}
+ if(kind==='jupiter'||kind==='saturn'){ctx.strokeStyle='#7c553b88';ctx.lineWidth=Math.max(1,r*.12);for(let i=-2;i<=2;i++){ctx.beginPath();ctx.ellipse(x,y+i*r*.22,r*.9,r*.08,0,0,Math.PI*2);ctx.stroke()}}
+ ctx.restore();if(kind==='saturn'){ctx.strokeStyle='#d9c69a';ctx.lineWidth=Math.max(2,r*.13);ctx.beginPath();ctx.ellipse(x,y,r*1.45,r*.38,-.2,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#685f4e';ctx.lineWidth=Math.max(1,r*.045);ctx.beginPath();ctx.ellipse(x,y,r*1.2,r*.3,-.2,0,Math.PI*2);ctx.stroke()}}
+function lighten(hex,f){let h=hex.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');let n=parseInt(h,16),r=Math.min(255,((n>>16)&255)*f),g=Math.min(255,((n>>8)&255)*f),b=Math.min(255,(n&255)*f);return `rgb(${r|0},${g|0},${b|0})`}
+function drawEarthMapMini(x,y,r){ctx.save();ctx.fillStyle='#dce9f2';ctx.font=`${Math.max(9,r*.09)}px system-ui`;ctx.textAlign='center';ctx.fillText('NORTH AMERICA',x-r*.5,y-r*.12);ctx.fillText('SOUTH AMERICA',x-r*.25,y+r*.45);ctx.fillText('EUROPE · AFRICA',x+r*.2,y+r*.05);ctx.fillText('ASIA',x+r*.53,y-r*.2);ctx.restore()}
+function render(){let w=innerWidth,h=innerHeight,cx=w/2,cy=h/2;ctx.clearRect(0,0,w,h);
+ let bg=ctx.createRadialGradient(cx,cy,10,cx,cy,Math.max(w,h)*.8);bg.addColorStop(0,stage==='earth'?'#173d61':stage==='solar'?'#241b2b':'#14203e');bg.addColorStop(1,'#02040b');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+ for(const s of stars){ctx.globalAlpha=s.a*(.6+.4*Math.sin(Date.now()*.001+s.x*10));ctx.fillStyle='#e3efff';ctx.beginPath();ctx.arc(s.x*w,s.y*h,s.r,0,7);ctx.fill()}ctx.globalAlpha=1;
+ ctx.save();ctx.translate(cx,cy);ctx.rotate(rot*.01);
+ if(stage==='earth'&&target==='earth'){let r=Math.min(w,h)*.25*zoom;r=Math.max(35,Math.min(r,Math.min(w,h)*.43));sphere(0,0,r,'#1677c8','earth');drawEarthMapMini(0,0,r);if(moonOn){let orbit=r*1.55;ctx.strokeStyle='#b6c9e655';ctx.setLineDash([3,6]);ctx.beginPath();ctx.ellipse(0,0,orbit,orbit*.43,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);let a=Date.now()*.0003+rot*.03;let mx=Math.cos(a)*orbit,my=Math.sin(a)*orbit*.43;sphere(mx,my,r*.22,'#c8cbd1','moon');ctx.fillStyle='#e5edff';ctx.font='12px system-ui';ctx.fillText(tr('moonName'),mx+12,my-10)}}
+ else if(stage==='solar'){let R=Math.min(w,h)*.38; sphere(0,0,Math.max(20,R*.13),'#ffbf3d','sun');let list=['mercury','venus','earth','mars','jupiter','saturn','uranus','neptune','pluto','ceres','eris'];list.forEach((k,i)=>{let rr=R*(.2+i*.075),a=Date.now()*.00008/(i*.15+1)+i*.7+rot*.02;ctx.strokeStyle='#9bb6df33';ctx.beginPath();ctx.ellipse(0,0,rr,rr*.55,0,0,Math.PI*2);ctx.stroke();let x=Math.cos(a)*rr,y=Math.sin(a)*rr*.55;let pr=(k===target?Math.min(w,h)*.055:Math.max(3,Math.min(w,h)*(.008+(i%4)*.002)));sphere(x,y,pr,colors[k]||'#9ca6b8',k);if(k===target||pr>7){ctx.fillStyle='#e6eeff';ctx.font='11px system-ui';ctx.fillText(tr(k),x+pr+4,y+3)}})}
+ else{let R=Math.min(w,h)*.31;if(target==='galaxy'||stage==='galaxy'){for(let arm=0;arm<5;arm++){ctx.strokeStyle=['#6e9be9','#a6b8f7','#e2c2ff'][arm%3]+'88';ctx.lineWidth=2;ctx.beginPath();for(let t=0;t<90;t++){let a=t*.11+arm*1.25+rot*.01,rr=R*t/90,xx=Math.cos(a)*rr,yy=Math.sin(a)*rr*.5;if(t===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy)}ctx.stroke()}sphere(0,0,R*.09,'#fff1cf','sun')}
+ else{for(let i=0;i<70;i++){let x=(Math.sin(i*92.3+rot*.01))*R,y=(Math.cos(i*42.7))*R*.6;ctx.fillStyle=i%8===0?'#d5b6ff':'#8cb8ff';ctx.beginPath();ctx.arc(x,y,i%8===0?4:1.5,0,7);ctx.fill()}for(let i=0;i<7;i++){ctx.strokeStyle='#88b6ff30';ctx.beginPath();ctx.moveTo(-R,Math.sin(i)*R*.3);ctx.bezierCurveTo(-R*.3,-R*.5,R*.3,R*.5,R,Math.cos(i)*R*.3);ctx.stroke()}}}
+ ctx.restore();if(anim)rot+=.08;requestAnimationFrame(render)}
+render();
+function openMap(){if(target!=='earth'){selectTarget('earth')}mapActive=true;$('map').classList.add('on');$('mapNote').style.display='block';if(!mapLoaded){if(!window.L){let css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(css);let sc=document.createElement('script');sc.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';sc.onload=initMap;sc.onerror=()=>toast(tr('noMap'));document.body.appendChild(sc)}else initMap()}else setTimeout(()=>map.invalidateSize(),100);toast(tr('mapToast'))}
+let map, currentLayer=null, userMarker=null, qiblaBearing=null, deviceHeading=0, compassEnabled=false, offlineMapFileUrl=null;
+const layers={
+ street:()=>L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}),
+ satellite:()=>L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}),
+ hybrid:()=>L.layerGroup([L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}),L.tileLayer('https://{s}.basemaps.cartocdn.com/labelsonly/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© CARTO'})]),
+ terrain:()=>L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenTopoMap contributors'}),
+ dark:()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© CARTO'}),
+ humanitarian:()=>L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap, HOT'})
+};
+function setLayer(key){if(!map)return;if(currentLayer)map.removeLayer(currentLayer);currentLayer=layers[key]?layers[key]():layers.street();currentLayer.addTo(map)}
+function initMap(){if(!window.L){toast(tr('noMap'));return}map=L.map('map',{zoomControl:true}).setView([23.7,90.35],3);setLayer($('mapLayer').value||'street');mapLoaded=true;setTimeout(()=>map.invalidateSize(),150)}
+$('mapLayer').onchange=e=>{if(!mapLoaded){openMap();setTimeout(()=>setLayer(e.target.value),900)}else setLayer(e.target.value)};
+function qiblaFrom(lat,lon){const rad=Math.PI/180,la1=lat*rad,lo1=lon*rad,la2=21.4225*rad,lo2=39.8262*rad;let y=Math.sin(lo2-lo1),x=Math.cos(la1)*Math.tan(la2)-Math.sin(la1)*Math.cos(lo2);return (Math.atan2(y,x)/rad+360)%360}
+function findLocation(forMap){if(!navigator.geolocation){$('qiblaText').textContent='GPS/geolocation unavailable on this browser.';return} $('qiblaText').textContent='Requesting device location…';navigator.geolocation.getCurrentPosition(pos=>{let lat=pos.coords.latitude,lon=pos.coords.longitude;qiblaBearing=qiblaFrom(lat,lon);$('qiblaArrow').style.transform=`rotate(${qiblaBearing}deg)`;$('qiblaText').textContent=`Qibla bearing: ${qiblaBearing.toFixed(1)}° from true north. GPS location acquired.`;if(mapLoaded){map.setView([lat,lon],15);if(userMarker)map.removeLayer(userMarker);userMarker=L.marker([lat,lon]).addTo(map).bindPopup('Your device location');if(forMap)userMarker.openPopup()}},err=>{$('qiblaText').textContent='Could not get location. Enable location permission; GPS may work without mobile data, but browser support varies.'},{enableHighAccuracy:true,timeout:15000,maximumAge:60000})}
+$('locateBtn').onclick=()=>findLocation(true);$('qiblaBtn').onclick=()=>findLocation(false);
+async function enableLiveCompass(){
+ try{
+  if(typeof DeviceOrientationEvent==='undefined'){toast('This device/browser does not support orientation sensors.');return}
+  if(typeof DeviceOrientationEvent.requestPermission==='function'){
+   const permission=await DeviceOrientationEvent.requestPermission();
+   if(permission!=='granted'){toast('Compass permission was not granted.');return}
+  }
+  window.addEventListener('deviceorientationabsolute',orientationHandler,true);
+  window.addEventListener('deviceorientation',orientationHandler,true);
+  compassEnabled=true;$('sensorBtn').textContent='Live compass enabled';toast('Live compass enabled. Calibrate the phone if needed.');
+ }catch(e){toast('Live compass needs HTTPS and sensor permission on a supported device.')}
+}
+function orientationHandler(e){
+ let heading=null;
+ if(typeof e.webkitCompassHeading==='number') heading=e.webkitCompassHeading;
+ else if(typeof e.alpha==='number') heading=(360-e.alpha)%360;
+ if(heading===null||!Number.isFinite(heading))return;
+ deviceHeading=heading;
+ if(qiblaBearing!==null){
+   let rel=(qiblaBearing-deviceHeading+360)%360;
+   $('qiblaArrow').style.transform=`rotate(${rel}deg)`;
+   $('qiblaText').textContent=`Qibla ${qiblaBearing.toFixed(1)}° from true north · phone heading ${deviceHeading.toFixed(0)}°`;
+ }
+}
+$('sensorBtn').onclick=enableLiveCompass;
+$('offlineHelpBtn').onclick=()=>toast('Offline maps: use a legally licensed regional .pmtiles file. Import it here; this prototype cannot download the entire world or bulk-download public map tiles.');
+$('importOfflineBtn').onclick=()=>$('offlineFile').click();
+$('offlineFile').onchange=async e=>{
+ const file=e.target.files&&e.target.files[0];if(!file)return;
+ $('offlineStatus').textContent=`Selected: ${file.name} (${(file.size/1024/1024).toFixed(1)} MB). Browser map renderer must support this PMTiles/MBTiles file; this prototype records the file selection but does not yet render it as an offline basemap.`;
+ toast('Offline map file selected. Full offline rendering needs a map engine and compatible tile archive.');
+};
+$('mapBtn').onclick=openMap;$('mapFromInfo').onclick=openMap;
+$('earthBtn').onclick=()=>{mapActive=false;$('map').classList.remove('on');$('mapNote').style.display='none';target='earth';stage='earth';zoom=1;updateDescription();renderGrid();$('stageTitle').innerHTML='<h2>🌍 '+tr('earth')+'</h2>'};
+$('cosmosBtn').onclick=()=>{setStage('multiverse');toast(tr('explainMulti'))};
+$('moonToggle').onclick=()=>{moonOn=!moonOn;toast(tr('moon')+': '+(moonOn?'ON':'OFF'))};
+function setStage(next){stage=next;target=next;zoom=1;mapActive=false;$('map').classList.remove('on');$('mapNote').style.display='none';updateDescription();renderGrid();$('stageTitle').innerHTML='<h2>'+icon(next)+' '+tr(next)+'</h2>';}
+const scaleStages=['earth','solar','galaxy','web','universe','multiverse'];
+$('zoomIn').onclick=()=>{if(mapActive&&map){map.zoomIn();return}zoom=Math.min(2.8,zoom*1.18);if(zoom>2.4){if(stage==='earth'){openMap();return}let i=scaleStages.indexOf(stage);if(i>0)setStage(scaleStages[i-1]);}};
+$('zoomOut').onclick=()=>{if(mapActive&&map){map.zoomOut();return}zoom=Math.max(.45,zoom/1.18);if(zoom<.65){let i=scaleStages.indexOf(stage);if(i>=0&&i<scaleStages.length-1)setStage(scaleStages[i+1]);}};
+$('animBtn').onclick=()=>{anim=!anim;$('animBtn').innerHTML=(anim?'⏸ ':'▶ ')+`<span>${tr(anim?'pause':'play')}</span>`};
+$('resetBtn').onclick=()=>{rot=0;zoom=1;stage='earth';target='earth';mapActive=false;$('map').classList.remove('on');$('mapNote').style.display='none';updateDescription();renderGrid();$('stageTitle').innerHTML='<h2>🌍 '+tr('earth')+'</h2>'};
+$('explainBtn').onclick=()=>{let k=target==='earth'?'explainEarth':(['sun','mercury','venus','mars','jupiter','saturn','uranus','neptune','pluto','ceres','eris','moonName'].includes(target)?'explainPlanet':target==='multiverse'?'explainMulti':'explainCosmos');$('extra').hidden=!$('extra').hidden;$('extra').textContent=tr(k);};
+$('starBtn').onclick=()=>{if(favorites.includes(target)){toast(tr('already'));return}favorites.push(target);renderFavorites();toast(tr('saved'))};
+function renderFavorites(){$('favorites').innerHTML=favorites.length?favorites.map(k=>`<button class="small" style="margin:3px" data-fav="${k}">${icon(k)} ${tr(k)} ×</button>`).join(''):tr('noFav');document.querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{favorites=favorites.filter(k=>k!==b.dataset.fav);renderFavorites()})}
+$('lang').onchange=e=>{lang=e.target.value;applyLang()};
+// Drag panels by their headers; keep all controls draggable without changing the scene.
+document.querySelectorAll('[data-drag]').forEach(head=>{let panel=$(head.dataset.drag),p=null;head.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;p={x:e.clientX,y:e.clientY,l:panel.offsetLeft,t:panel.offsetTop};head.setPointerCapture(e.pointerId)});head.addEventListener('pointermove',e=>{if(!p)return;panel.style.left=Math.max(0,Math.min(innerWidth-panel.offsetWidth,p.l+e.clientX-p.x))+'px';panel.style.top=Math.max(0,Math.min(innerHeight-70,p.t+e.clientY-p.y))+'px';panel.style.right='auto';panel.style.bottom='auto'});head.addEventListener('pointerup',()=>p=null);head.addEventListener('pointercancel',()=>p=null)});
+document.querySelectorAll('[data-hide]').forEach(b=>b.onclick=()=>{let p=$(b.dataset.hide);p.style.display=p.style.display==='none'?'block':'none'});
+// Pointer gestures: single-pointer drag rotates, two-pointer pinch changes cosmic zoom.
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)drag={x:e.clientX,y:e.clientY,rot};if(pointers.size===2){let a=[...pointers.values()];pinch={d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),z:zoom};drag=null}});
+canvas.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size>=2&&pinch){let a=[...pointers.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);zoom=Math.max(.45,Math.min(2.8,pinch.z*d/pinch.d));if(zoom>2.4){if(stage==='earth'){openMap();zoom=1;pinch=null}else{let i=scaleStages.indexOf(stage);if(i>0){setStage(scaleStages[i-1]);pinch=null}}}else if(zoom<.65){let i=scaleStages.indexOf(stage);if(i>=0&&i<scaleStages.length-1){setStage(scaleStages[i+1]);pinch=null}}}else if(drag&&pointers.size===1){rot=drag.rot+(e.clientX-drag.x)*.7}});
+function endPointer(e){pointers.delete(e.pointerId);if(pointers.size<2)pinch=null;if(!pointers.size)drag=null}canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointercancel',endPointer);
+async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+$('ownerBtn').onclick=()=>{$('ownerModal').style.display='flex';$('ownerPass').value='';$('ownerPass2').value='';$('ownerMsg').textContent=localStorage.getItem('universeOwnerHash')? 'Enter owner password to unlock settings.':tr('ownerSetup')};
+$('ownerClose').onclick=()=>{$('ownerModal').style.display='none'};
+$('ownerSubmit').onclick=async()=>{let saved=localStorage.getItem('universeOwnerHash'),p=$('ownerPass').value;if(!saved){if(p.length<8){$('ownerMsg').textContent='Use at least 8 characters.';return}if(p!==$('ownerPass2').value){$('ownerMsg').textContent='Passwords do not match.';return}localStorage.setItem('universeOwnerHash',await hash(p));ownerUnlocked=true;$('ownerModal').style.display='none';toast('Owner password created on this browser.');return}if(await hash(p)===saved){ownerUnlocked=true;$('ownerModal').style.display='none';toast(tr('ownerReady'));}else $('ownerMsg').textContent=tr('ownerWrong')};
+applyLang();
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body></html>
